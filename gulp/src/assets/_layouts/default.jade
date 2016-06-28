@@ -1,0 +1,21 @@
+
+include ../_partials/meta-head
+include ../_partials/l-header
+include ../_partials/l-footer
+
+//- ########################################################################
+//-
+//- layout
+//-
+//- ########################################################################
+
+doctype html
+block setting
+block html
+  html(class="no-js modern", lang="ja")
+    block meta-head
+    body
+      article(class="l-body")
+        +l-header(pageID)
+        block contents
+        +l-footer(pageID)

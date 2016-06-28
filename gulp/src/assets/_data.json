@@ -1,0 +1,32 @@
+{
+  "charset": "UTF-8",
+  "themecolor": "#ffffff",
+  "viewport": "width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no",
+  "path": {
+    "domain": "http://hoge.jp",
+    "root": "/",
+    "img": "/assets/img/",
+    "css": "/assets/css/",
+    "js": "/assets/js/"
+  },
+  "meta": {
+    "def": {
+      "title": "HOGE",
+      "desc": "HOGE Description.",
+      "keywords": "",
+      "author": "BAPHO",
+      "robots": "index, follow",
+      "oglocale": "ja_JP",
+      "ogtype": "website",
+      "ogsitename": "HOGE",
+      "ogurl": "",
+      "ogimage": "/assets/img/meta/ogp.png",
+      "clipicon": "/assets/img/meta/clipicon.png",
+      "favicon": "/assets/img/meta/favicon.ico"
+    },
+    "underpage": {
+      "title": "UnderPage | HOGE",
+      "ogurl": "/underpage/"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+
+//- テンプレート継承
+extends /assets/_layouts/default
+
+//- meta設定
+block vars
+  - var pageID = "top"
+
+//- _data.json参照してmeta-head呼び出し
+block meta-head
+  +meta-head(meta.def)
+
+//- ページ個別のCSS
+block append style
+  //- link(rel="stylesheet", href="#{path.css}unique.css")
+
+//- ページ個別のJS
+block append script
+  script(src="https://code.jquery.com/jquery-2.2.4.min.js", integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=", crossorigin="anonymous")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js")
+  //- script(src="/assets/js/unique.js", type="text/javascript")
+
+//- ここからコンテンツ部分を記述
+block contents
+
+  section contents area
