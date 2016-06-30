@@ -15,7 +15,7 @@ DIR_C = [ "#{DIR_D}/**/*" ]
 
 # パス管理
 paths =
-  html    : [ "#{DIR_S}/**/*.html","!#{DIR_S}/assets/_**/*" ]
+  html    : "#{DIR_S}/**/*.html"
   jade    : "#{DIR_S}/**/*.jade"
   css     : "#{DIR_S}/**/*.css"
   scss    : "#{DIR_S}/**/*.scss"
@@ -102,7 +102,7 @@ gulp.task "copyimg", ->
 gulp.task "jade", ->
   gulp.src paths.jade
     .pipe _plumber "jade"
-    .pipe $.data -> require "./#{DIR_S}/#{DIR_A}/_data.json"
+    .pipe $.data -> require "./data.json"
     .pipe $.jade
       pretty: true
       basedir: "./#{DIR_S}"
