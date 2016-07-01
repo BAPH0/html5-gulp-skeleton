@@ -3,13 +3,19 @@
 #  setting
 # ---------------------------------------------------------
 
-# src dir
+# port number of the localhost
+PORT = 50000
+
+# prefix outside the copy target
+DCP = "_"
+
+# the development source dir
 DIR_S = "src"
 
-# publish dir
+# publishing dir
 DIR_P = "../htdocs"
 
-# clean dir
+# delete the target dir
 DIR_C = [
   "#{DIR_P}/**/*"
   "!#{DIR_P}/.htaccess"
@@ -19,16 +25,22 @@ DIR_C = [
 ]
 
 # paths array
-PA =
+PATHS =
   html    : "#{DIR_S}/**/*.html"
   jade    : "#{DIR_S}/**/*.jade"
   css     : "#{DIR_S}/**/*.css"
   sass    : "#{DIR_S}/**/*.{sass,scss}"
   coffee  : "#{DIR_S}/**/*.coffee"
+  ts      : [ "#{DIR_S}/**/*.ts", "!./node_modules/**" ]
   js      : "#{DIR_S}/**/*.js"
   json    : "#{DIR_S}/**/*.json"
   img     : "#{DIR_S}/**/*.{png,jpg,gif}"
-  other   : "#{DIR_S}/**/*.{htaccess,htpasswd}"
+  other   : [
+    "#{DIR_S}/**/*"
+    "#{DIR_S}/**/.htaccess"
+    "!#{DIR_S}/**/*.{html,jade,css,sass,scss,js,json,coffee,ts}"
+    "!#{DIR_S}/**/img/**"
+  ]
 
 # plugins
 del          = require "del"
@@ -41,6 +53,10 @@ $            = require("gulp-load-plugins")()
 # ---------------------------------------------------------
 #  sugar functions
 # ---------------------------------------------------------
+
+_path = (ext) ->
+  return [].concat PATHS[ext], [
+    "!#{DIR_S}/**/#{DCP}*", "!#{DIR_S}/**/#{DCP}*/", "!#{DIR_S}/**/#{DCP}*/**" ]
 
 _plm = (task) ->
   e = $.notify.onError title:"#{task} Error", message:"<%= error.message %>"
@@ -71,15 +87,16 @@ _trc = (str) ->
 gulp.task "clean", (callback) -> del DIR_C, { force: true }, callback
 
 # copy
-gulp.task "copyhtml", -> _cpy PA.html, "copyhtml"
-gulp.task "copycss", -> _cpy PA.css, "copycss", $.autoprefixer
-gulp.task "copyjs", -> _cpy PA.js, "copyjs"
-gulp.task "copyjson", ["jsonlint"], -> _cpy PA.json, "copyjson"
-gulp.task "copyimg", -> _cpy PA.img, "copyimg"
+gulp.task "copyhtml", -> _cpy _path("html"), "copyhtml"
+gulp.task "copycss", -> _cpy _path("css"), "copycss", $.autoprefixer
+gulp.task "copyjs", -> _cpy _path("js"), "copyjs"
+gulp.task "copyjson", ["jsonlint"], -> _cpy _path("json"), "copyjson"
+gulp.task "copyimg", -> _cpy _path("img"), "copyimg"
+gulp.task "copyother", -> _cpy _path("other"), "copyother"
 
 # html
 gulp.task "jade", ->
-  gulp.src PA.jade
+  gulp.src _path "jade"
     .pipe _plm "jade"
     .pipe $.data -> require "./data.json"
     .pipe $.jade
@@ -89,7 +106,7 @@ gulp.task "jade", ->
 
 # css
 gulp.task "sass", ->
-  gulp.src PA.sass
+  gulp.src _path "sass"
     .pipe _plm "sass"
     .pipe $.sass
       outputStyle: "expanded"
@@ -97,21 +114,27 @@ gulp.task "sass", ->
     .pipe _dst()
 
 # js
+gulp.task "ts", ->
+  gulp.src _path "ts"
+    .pipe _plm "ts"
+    .pipe $.typescript()
+    .pipe _dst()
+
 gulp.task "coffee", ->
-  gulp.src PA.coffee
+  gulp.src _path "coffee"
     .pipe _plm "coffee"
     .pipe $.coffee()
     .pipe _dst()
 
 gulp.task "uglify", ->
-  gulp.src PA.js
+  gulp.src _path "js"
     .pipe _plm "js"
     .pipe $.uglify()
     .pipe _dst()
 
 # json
 gulp.task "jsonlint", ->
-  gulp.src PA.json
+  gulp.src _path "json"
     .pipe _plm "json"
     .pipe $.jsonlint()
     .pipe $.jsonlint.reporter()
@@ -122,28 +145,30 @@ gulp.task "webserver", ->
   gulp.src DIR_P
     .pipe $.webserver
       livereload: true
-      port: 50000
+      port: PORT
       open: true
       host: "localhost"
-    .pipe $.notify '[run]: start local server. http://localhost:50000/'
+    .pipe $.notify "[run]: start local server. http://localhost:#{PORT}/"
 
 
 # ---------------------------------------------------------
 #  combination tasks
 # ---------------------------------------------------------
 
-gulp.task "tasksHtml", [ "copyhtml", "jade" ]
+gulp.task "tasksHtml", [ "jade", "copyhtml" ]
 gulp.task "tasksCss", [ "copycss", "sass" ]
-gulp.task "tasksJs", [ "copyjs", "coffee", "uglify" ]
+gulp.task "tasksJs", [ "copyjs", "ts", "coffee", "uglify" ]
 gulp.task "tasksWatch", ->
-  gulp.watch PA.html, [ "copyhtml" ]
-  gulp.watch PA.css, [ "copycss" ]
-  gulp.watch PA.js, [ "copyjs" ]
-  gulp.watch PA.json, [ "copyjson" ]
-  gulp.watch PA.img, [ "copyimg" ]
-  gulp.watch PA.jade, [ "jade" ]
-  gulp.watch PA.sass, [ "sass" ]
-  gulp.watch PA.coffee, [ "coffee" ]
+  gulp.watch _path("html"),   [ "copyhtml" ]
+  gulp.watch _path("css"),    [ "copycss" ]
+  gulp.watch _path("js"),     [ "copyjs" ]
+  gulp.watch _path("json"),   [ "copyjson" ]
+  gulp.watch _path("img"),    [ "copyimg" ]
+  gulp.watch _path("img"),    [ "copyother" ]
+  gulp.watch _path("jade"),   [ "jade" ]
+  gulp.watch _path("sass"),   [ "sass" ]
+  gulp.watch _path("coffee"), [ "coffee" ]
+  gulp.watch _path("ts"),     [ "ts" ]
 
 # call mainly
 
@@ -162,7 +187,7 @@ gulp.task "run", [ "webserver", "tasksWatch" ], ->
   notifier.notify title: "gulp", message: "watch start..."
 
 gulp.task "default", [ "clean" ], ->
-  runSequence [ "copyjson" ], [ "tasksHtml", "tasksCss", "tasksJs", "copyimg" ], ->
+  runSequence [ "copyjson" ], [ "tasksHtml", "tasksCss", "tasksJs", "copyimg", "copyother" ], ->
     _trc "    .gNNNNNNNNm+.     .NNNK_      .NNNK_  .dNNmI   .NNNm_         .gNNNNNNNNNga..       jNNNR"
     _trc "   .dMMMMBWHMMMMN+    jMMM#       jMMM#   .MMM#>   jMMM#          ,MMMMHBWHMMMMMNx     .WMM#3"
     _trc "   .MMM#>   .WMMM@   .MMM#C      .MMM#C   JMMM#   .WMM#3          jMMM#     (TMMMNs    ,MMM#`"
