@@ -32,6 +32,15 @@ DIR_C = [
 #  Setting of gulp
 # ---------------------------------------------------------
 
+# directory of tsify file
+TSIFY_DIR = "assets/js"
+
+# tsify file name of the development source
+TSIFY_FILE_S = "#{DCP}tsify.ts"
+
+# tsify file name of the publishing source
+TSIFY_FILE_P = "bundle-by-ts.js"
+
 # paths array
 PATHS =
   html    : "#{DIR_S}/**/*.html"
@@ -53,7 +62,9 @@ PATHS =
 # plugins
 del          = require "del"
 notifier     = require "node-notifier"
+browserify   = require "browserify"
 runSequence  = require "run-sequence"
+source       = require "vinyl-source-stream"
 gulp         = require "gulp"
 $            = require("gulp-load-plugins")()
 
@@ -128,9 +139,22 @@ gulp.task "ts", ->
     .pipe $.typescript
       target: "#{ESV}"
       removeComments: true
+      # module: "amd"
       # module: "commonjs"
       # noImplicitAny: true
     .pipe _dst()
+
+gulp.task "tsify", ->
+  browserify()
+    .add "#{DIR_S}/#{TSIFY_DIR}/#{TSIFY_FILE_S}"
+    .plugin "tsify",
+      target: "#{ESV}"
+      removeComments: true
+    .bundle()
+    .pipe source "#{TSIFY_FILE_P}" # <- conversion to vinyl
+    .pipe _plm "tsify"
+    # .pipe $.uglify()
+    .pipe gulp.dest "#{DIR_P}/#{TSIFY_DIR}"
 
 gulp.task "coffee", ->
   gulp.src _path "coffee"
@@ -169,7 +193,7 @@ gulp.task "webserver", ->
 
 gulp.task "tasksHtml", [ "jade", "copyhtml" ]
 gulp.task "tasksCss", [ "copycss", "sass" ]
-gulp.task "tasksJs", [ "copyjs", "ts", "coffee", "uglify" ]
+gulp.task "tasksJs", [ "copyjs", "tsify", "ts", "coffee", "uglify" ]
 gulp.task "tasksWatch", ->
   gulp.watch _path("html"),   [ "copyhtml" ]
   gulp.watch _path("css"),    [ "copycss" ]
