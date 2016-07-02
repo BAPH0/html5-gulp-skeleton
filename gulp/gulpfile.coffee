@@ -1,10 +1,13 @@
 
 # ---------------------------------------------------------
-#  setting
+#  Settings for each project
 # ---------------------------------------------------------
 
 # port number of the localhost
 PORT = 50000
+
+# version of ECMAScript for typescript
+ESV = "ES5"
 
 # prefix outside the copy target
 DCP = "_"
@@ -24,6 +27,11 @@ DIR_C = [
   "!#{DIR_P}/wordpress/**"
 ]
 
+
+# ---------------------------------------------------------
+#  Setting of gulp
+# ---------------------------------------------------------
+
 # paths array
 PATHS =
   html    : "#{DIR_S}/**/*.html"
@@ -31,7 +39,7 @@ PATHS =
   css     : "#{DIR_S}/**/*.css"
   sass    : "#{DIR_S}/**/*.{sass,scss}"
   coffee  : "#{DIR_S}/**/*.coffee"
-  ts      : [ "#{DIR_S}/**/*.ts", "!./node_modules/**" ]
+  ts      : "#{DIR_S}/**/*.ts"
   js      : "#{DIR_S}/**/*.js"
   json    : "#{DIR_S}/**/*.json"
   img     : "#{DIR_S}/**/*.{png,jpg,gif}"
@@ -117,7 +125,11 @@ gulp.task "sass", ->
 gulp.task "ts", ->
   gulp.src _path "ts"
     .pipe _plm "ts"
-    .pipe $.typescript()
+    .pipe $.typescript
+      target: "#{ESV}"
+      removeComments: true
+      # module: "commonjs"
+      # noImplicitAny: true
     .pipe _dst()
 
 gulp.task "coffee", ->
