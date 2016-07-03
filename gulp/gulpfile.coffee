@@ -27,19 +27,17 @@ DIR_C = [
   "!#{DIR_P}/wordpress/**"
 ]
 
+# root directory of tsify file
+DIR_TSIFY = "assets/js"
+
+# files name of tsify target (no extention string)
+# please to note the #{DCP}
+FILES_TSIFY = [ "#{DCP}bundle" ]
+
 
 # ---------------------------------------------------------
 #  Setting of gulp
 # ---------------------------------------------------------
-
-# directory of tsify file
-TSIFY_DIR = "assets/js"
-
-# tsify file name of the development source
-TSIFY_FILE_S = "#{DCP}tsify.ts"
-
-# tsify file name of the publishing source
-TSIFY_FILE_P = "bundle-by-ts.js"
 
 # paths array
 PATHS =
@@ -60,11 +58,13 @@ PATHS =
   ]
 
 # plugins
+fs           = require "fs"
 del          = require "del"
 notifier     = require "node-notifier"
 browserify   = require "browserify"
 runSequence  = require "run-sequence"
 source       = require "vinyl-source-stream"
+buffer       = require 'vinyl-buffer'
 gulp         = require "gulp"
 $            = require("gulp-load-plugins")()
 
@@ -97,6 +97,14 @@ _trc = (str) ->
   update = "[#{$.util.colors.gray(hhmmss)}]"
   console.log "#{update} #{$.util.colors.yellow(str)}"
   return
+
+_exist = (filepath, callback) ->
+  if not filepath instanceof String then return
+  if not callback instanceof Function or not callback then return
+  fs.exists filepath, (exists) ->
+    if exists then callback(exists) else _trc "File not exist: '#{filepath}'"
+  return
+
 
 # ---------------------------------------------------------
 #  individual tasks
@@ -133,28 +141,48 @@ gulp.task "sass", ->
     .pipe _dst()
 
 # js
+_tasksJs = [ "copyjs", "ts", "coffee", "uglify" ]
+_tasksTsify = []
+_tsify = (filename) ->
+  _taskname = "tsify: #{filename}.ts"
+  _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
+  _destdir = "#{DIR_P}/#{DIR_TSIFY}"
+  _exist _srcfile, (exists) ->
+    gulp.task _taskname, ->
+      bs = browserify()
+        .add _srcfile
+        .plugin "tsify",
+          target: "#{ESV}"
+          removeComments: true
+          sortOutput: true
+        .bundle()
+        .pipe _plm "tsify"
+      bs
+        .pipe source "#{filename}.js"
+        .pipe buffer()
+        .pipe gulp.dest _destdir
+      bs
+        .pipe source "#{filename}.min.js"
+        .pipe buffer()
+        .pipe $.uglify()
+        .pipe gulp.dest _destdir
+    _tasksTsify.push -> gulp.watch _srcfile, [ _taskname ]
+    _tasksJs.push _taskname
+    return
+if FILES_TSIFY.length then for n in FILES_TSIFY then _tsify n
+
 gulp.task "ts", ->
   gulp.src _path "ts"
     .pipe _plm "ts"
     .pipe $.typescript
       target: "#{ESV}"
       removeComments: true
+      sortOutput: true
       # module: "amd"
       # module: "commonjs"
       # noImplicitAny: true
+    .js
     .pipe _dst()
-
-gulp.task "tsify", ->
-  browserify()
-    .add "#{DIR_S}/#{TSIFY_DIR}/#{TSIFY_FILE_S}"
-    .plugin "tsify",
-      target: "#{ESV}"
-      removeComments: true
-    .bundle()
-    .pipe source "#{TSIFY_FILE_P}" # <- conversion to vinyl
-    .pipe _plm "tsify"
-    # .pipe $.uglify()
-    .pipe gulp.dest "#{DIR_P}/#{TSIFY_DIR}"
 
 gulp.task "coffee", ->
   gulp.src _path "coffee"
@@ -191,9 +219,9 @@ gulp.task "webserver", ->
 #  combination tasks
 # ---------------------------------------------------------
 
-gulp.task "tasksHtml", [ "jade", "copyhtml" ]
+gulp.task "tasksJs", _tasksJs
 gulp.task "tasksCss", [ "copycss", "sass" ]
-gulp.task "tasksJs", [ "copyjs", "tsify", "ts", "coffee", "uglify" ]
+gulp.task "tasksHtml", [ "jade", "copyhtml" ]
 gulp.task "tasksWatch", ->
   gulp.watch _path("html"),   [ "copyhtml" ]
   gulp.watch _path("css"),    [ "copycss" ]
@@ -205,6 +233,7 @@ gulp.task "tasksWatch", ->
   gulp.watch _path("sass"),   [ "sass" ]
   gulp.watch _path("coffee"), [ "coffee" ]
   gulp.watch _path("ts"),     [ "ts" ]
+  if _tasksTsify.length then for task in _tasksTsify then task()
 
 # call mainly
 
