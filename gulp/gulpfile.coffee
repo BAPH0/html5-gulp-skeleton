@@ -143,6 +143,12 @@ gulp.task "sass", ->
 # js
 _tasksJs = [ "copyjs", "ts", "coffee", "uglify" ]
 _tasksTsify = []
+_projTsify = $.typescript.createProject
+  target: "#{ESV}"
+  removeComments: true
+  sortOutput: true
+  module: "commonjs"
+
 _tsify = (filename) ->
   _taskname = "tsify: #{filename}.ts"
   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
@@ -151,10 +157,7 @@ _tsify = (filename) ->
     gulp.task _taskname, ->
       bs = browserify()
         .add _srcfile
-        .plugin "tsify",
-          target: "#{ESV}"
-          removeComments: true
-          sortOutput: true
+        .plugin "tsify", _projTsify
         .bundle()
         .pipe _plm "tsify"
       bs
@@ -174,13 +177,7 @@ if FILES_TSIFY.length then for n in FILES_TSIFY then _tsify n
 gulp.task "ts", ->
   gulp.src _path "ts"
     .pipe _plm "ts"
-    .pipe $.typescript
-      target: "#{ESV}"
-      removeComments: true
-      sortOutput: true
-      # module: "amd"
-      # module: "commonjs"
-      # noImplicitAny: true
+    .pipe $.typescript _projTsify
     .js
     .pipe _dst()
 
