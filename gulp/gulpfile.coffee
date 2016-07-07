@@ -153,24 +153,25 @@ _tsify = (filename) ->
   _taskname = "tsify: #{filename}.ts"
   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
   _destdir = "#{DIR_P}/#{DIR_TSIFY}"
+  _tasksTsify.push -> gulp.watch _srcfile, [ _taskname ]
+  _tasksJs.push _taskname
   _exist _srcfile, (exists) ->
     gulp.task _taskname, ->
       bs = browserify()
         .add _srcfile
         .plugin "tsify", _projTsify
         .bundle()
-        .pipe _plm "tsify"
       bs
         .pipe source "#{filename}.js"
         .pipe buffer()
+        .pipe _plm "tsify"
         .pipe gulp.dest _destdir
       bs
         .pipe source "#{filename}.min.js"
         .pipe buffer()
         .pipe $.uglify()
+        .pipe _plm "tsify"
         .pipe gulp.dest _destdir
-    _tasksTsify.push -> gulp.watch _srcfile, [ _taskname ]
-    _tasksJs.push _taskname
     return
 if FILES_TSIFY.length then for n in FILES_TSIFY then _tsify n
 
