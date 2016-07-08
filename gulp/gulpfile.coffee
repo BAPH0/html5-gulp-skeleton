@@ -10,7 +10,7 @@ PORT = 50000
 ESV = "ES5"
 
 # prefix outside the copy target
-DCP = "_"
+PRF = "_"
 
 # the development source dir
 DIR_S = "src"
@@ -31,8 +31,8 @@ DIR_C = [
 DIR_TSIFY = "assets/js"
 
 # files name of tsify target (no extention string)
-# please to note the #{DCP}
-FILES_TSIFY = [ "#{DCP}bundle" ]
+# please to note the #{PRF}
+FILES_TSIFY = [ "#{PRF}bundle" ]
 
 
 # ---------------------------------------------------------
@@ -75,7 +75,7 @@ $            = require("gulp-load-plugins")()
 
 _path = (ext) ->
   return [].concat PATHS[ext], [
-    "!#{DIR_S}/**/#{DCP}*", "!#{DIR_S}/**/#{DCP}*/", "!#{DIR_S}/**/#{DCP}*/**" ]
+    "!#{DIR_S}/**/#{PRF}*", "!#{DIR_S}/**/#{PRF}*/", "!#{DIR_S}/**/#{PRF}*/**" ]
 
 _plm = (task) ->
   e = $.notify.onError title:"#{task} Error", message:"<%= error.message %>"
