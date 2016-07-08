@@ -105,6 +105,11 @@ _exist = (filepath, callback) ->
     if exists then callback(exists) else _trc "File not exist: '#{filepath}'"
   return
 
+_error = (errorObject, callback) ->
+  $.notify.onError(errorObject.toString().split(": ").join(":\n")).apply this, arguments
+  if typeof @emit == "function" then @emit "end"
+  return
+
 
 # ---------------------------------------------------------
 #  individual tasks
@@ -159,25 +164,24 @@ _tsify = (filename) ->
         .add _srcfile
         .plugin "tsify", _projTsify
         .bundle()
+        .on "error", _error
       bs
         .pipe source "#{filename}.js"
         .pipe buffer()
-        .pipe _plm "tsify"
         .pipe gulp.dest _destdir
       bs
         .pipe source "#{filename}.min.js"
         .pipe buffer()
         .pipe $.uglify()
-        .pipe _plm "tsify"
         .pipe gulp.dest _destdir
     return
-if FILES_TSIFY.length then for n in FILES_TSIFY then _tsify n
+if FILES_TSIFY.length then for file in FILES_TSIFY then _tsify file
 
 _tsifyWatch = (filename) ->
   _taskname = "tsify: #{filename}.ts"
   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
   _exist _srcfile, (exists) ->
-    gulp.watch _srcfile, [ _taskname ]
+    gulp.watch PATHS.ts, [ _taskname ]
     return
 
 gulp.task "ts", ->
@@ -236,7 +240,7 @@ gulp.task "tasksWatch", ->
   gulp.watch _path("sass"),   [ "sass" ]
   gulp.watch _path("coffee"), [ "coffee" ]
   gulp.watch _path("ts"),     [ "ts" ]
-  if FILES_TSIFY.length then for n in FILES_TSIFY then _tsifyWatch n
+  if FILES_TSIFY.length then for file in FILES_TSIFY then _tsifyWatch file
 
 # call mainly
 
