@@ -142,7 +142,6 @@ gulp.task "sass", ->
 
 # js
 _tasksJs = [ "copyjs", "ts", "coffee", "uglify" ]
-_tasksTsify = []
 _projTsify = $.typescript.createProject
   target: "#{ESV}"
   removeComments: true
@@ -153,9 +152,8 @@ _tsify = (filename) ->
   _taskname = "tsify: #{filename}.ts"
   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
   _destdir = "#{DIR_P}/#{DIR_TSIFY}"
-  _tasksTsify.push -> gulp.watch _srcfile, [ _taskname ]
-  _tasksJs.push _taskname
   _exist _srcfile, (exists) ->
+    _tasksJs.push _taskname
     gulp.task _taskname, ->
       bs = browserify()
         .add _srcfile
@@ -174,6 +172,13 @@ _tsify = (filename) ->
         .pipe gulp.dest _destdir
     return
 if FILES_TSIFY.length then for n in FILES_TSIFY then _tsify n
+
+_tsifyWatch = (filename) ->
+  _taskname = "tsify: #{filename}.ts"
+  _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
+  _exist _srcfile, (exists) ->
+    gulp.watch _srcfile, [ _taskname ]
+    return
 
 gulp.task "ts", ->
   gulp.src _path "ts"
@@ -231,7 +236,7 @@ gulp.task "tasksWatch", ->
   gulp.watch _path("sass"),   [ "sass" ]
   gulp.watch _path("coffee"), [ "coffee" ]
   gulp.watch _path("ts"),     [ "ts" ]
-  if _tasksTsify.length then for task in _tasksTsify then task()
+  if FILES_TSIFY.length then for n in FILES_TSIFY then _tsifyWatch n
 
 # call mainly
 
