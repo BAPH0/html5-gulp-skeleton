@@ -62,6 +62,7 @@ fs           = require "fs"
 del          = require "del"
 notifier     = require "node-notifier"
 browserify   = require "browserify"
+watchify     = require "watchify"
 runSequence  = require "run-sequence"
 source       = require "vinyl-source-stream"
 buffer       = require 'vinyl-buffer'
@@ -146,43 +147,55 @@ gulp.task "sass", ->
     .pipe _dst()
 
 # js
-_tasksJs = [ "copyjs", "ts", "coffee", "uglify" ]
+_tasksTsify = []
 _projTsify = $.typescript.createProject
   target: "#{ESV}"
   removeComments: true
   sortOutput: true
   module: "commonjs"
 
-_tsify = (filename) ->
+_tsify = (filename, isWatch) ->
+  console.log "_tsify, isWatch:#{isWatch}"
   _taskname = "tsify: #{filename}.ts"
   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
   _destdir = "#{DIR_P}/#{DIR_TSIFY}"
-  _exist _srcfile, (exists) ->
-    _tasksJs.push _taskname
-    gulp.task _taskname, ->
-      bs = browserify()
-        .add _srcfile
+  _exist _srcfile, (exists) -> _trc "File exist: '#{filename}'"
+  _tasksTsify.push _taskname
+  gulp.task _taskname, ->
+    bf = browserify
+      entries: [_srcfile]
+      cache: {}
+      packageCache: {}
+    wf = watchify bf
+    bundle = ->
+      console.log "rebundle: #{_srcfile}"
+      wf
         .plugin "tsify", _projTsify
         .bundle()
         .on "error", _error
-      bs
         .pipe source "#{filename}.js"
         .pipe buffer()
         .pipe gulp.dest _destdir
-      bs
+      wf
+        .plugin "tsify", _projTsify
+        .bundle()
+        .on "error", _error
         .pipe source "#{filename}.min.js"
         .pipe buffer()
         .pipe $.uglify()
         .pipe gulp.dest _destdir
-    return
-if FILES_TSIFY.length then for file in FILES_TSIFY then _tsify file
+    if isWatch
+      wf.on "update", bundle
+      wf.on "log", (message) -> console.log message
+    return bundle()
+  return
 
-_tsifyWatch = (filename) ->
-  _taskname = "tsify: #{filename}.ts"
-  _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
-  _exist _srcfile, (exists) ->
-    gulp.watch PATHS.ts, [ _taskname ]
-    return
+# _tsifyWatch = (filename) ->
+#   _taskname = "tsify: #{filename}.ts"
+#   _srcfile = "#{DIR_S}/#{DIR_TSIFY}/#{filename}.ts"
+#   _exist _srcfile, (exists) ->
+#     gulp.watch PATHS.ts, [ _taskname ]
+#     return
 
 gulp.task "ts", ->
   gulp.src _path "ts"
@@ -226,7 +239,13 @@ gulp.task "webserver", ->
 #  combination tasks
 # ---------------------------------------------------------
 
-gulp.task "tasksJs", _tasksJs
+gulp.task "createTsify", ->
+  if FILES_TSIFY.length then for file in FILES_TSIFY then _tsify file, false
+gulp.task "createTsifyWatchify", ->
+  if FILES_TSIFY.length then for file in FILES_TSIFY then _tsify file, true
+
+gulp.task "tasksTsify", _tasksTsify
+gulp.task "tasksJs", [ "copyjs", "ts", "coffee", "uglify" ]
 gulp.task "tasksCss", [ "copycss", "sass" ]
 gulp.task "tasksHtml", [ "jade", "copyhtml" ]
 gulp.task "tasksWatch", ->
@@ -240,26 +259,26 @@ gulp.task "tasksWatch", ->
   gulp.watch _path("sass"),   [ "sass" ]
   gulp.watch _path("coffee"), [ "coffee" ]
   gulp.watch _path("ts"),     [ "ts" ]
-  if FILES_TSIFY.length then for file in FILES_TSIFY then _tsifyWatch file
 
 # call mainly
 
-gulp.task "run", [ "webserver", "tasksWatch" ], ->
-  _trc "jgggp     .ggggg     .gggg!      .gggggp      .ggggggggggggggg:     ..(gNMMMNNg,   jggg[       (gggp"
-  _trc "dMMM#     dMMMMM    .MMMMt      .MMMMMMN      dMMMMMMMMMMMMMM#    .MMMMMMMMMMM#   .MMMM        MMMM]"
-  _trc "JMMM#    JMMMMM#   .MMMMF      .MMMFMMMM-     `````jMMM#``````  .MMMMM9^`    _!   (MMM#       .MMMM`"
-  _trc "(MMM#   .MM#dMM#   JMMMF      .MMM@ dMMM]          MMMMF       jMMMM'             MMMMF       dMMMF"
-  _trc ",MMM#  .MMM^dMM#  .MMM@      .MMM#` JMMMb         .MMMM!      (MMMMt             .MMMMa&+++++&MMMM"
-  _trc ",MMM# .MMMF dMM# .MMM#     `.MMM#`  ,MMMN     `   JMMM#       MMMM#              JMMMMMMMMMMMMMMM#"
-  _trc ".MMM# dMMF  dMM#.MMMM`     .MMMMNggggMMMM_       .MMMM%      .MMMM#             .MMMMY7777777MMMMF"
-  _trc ".MMM@(MM#   dMM#(MMM!     .MMMMMMMMMMMMMM]       .MMMM`    `  MMMMM,    `       .MMMM       .MMMM:"
-  _trc " MMMNMM#`   dMMMMMM^     .MMMM$      MMMMb   `   dMMMF        ,MMMMMa,.  ` ..   dMMMF       JMMM#"
-  _trc " MMMMMM'    dMMMMM%     .MMMMF       dMMM#      .MMMM          .WMMMMMMMMMMMF  .MMMM>      .MMMM%"
-  _trc " MMMMM^     ?MMMMt     .MMMMD        ?MMMM      JMMMB             ?'MMMMMMMY'  ?MMME       ,MMMM`"
-  notifier.notify title: "gulp", message: "watch start..."
+gulp.task "run", [ "webserver" ], ->
+  runSequence [ "createTsifyWatchify" ], [ "tasksTsify", "tasksWatch" ], ->
+    _trc "jgggp     .ggggg     .gggg!      .gggggp      .ggggggggggggggg:     ..(gNMMMNNg,   jggg[       (gggp"
+    _trc "dMMM#     dMMMMM    .MMMMt      .MMMMMMN      dMMMMMMMMMMMMMM#    .MMMMMMMMMMM#   .MMMM        MMMM]"
+    _trc "JMMM#    JMMMMM#   .MMMMF      .MMMFMMMM-     `````jMMM#``````  .MMMMM9^`    _!   (MMM#       .MMMM`"
+    _trc "(MMM#   .MM#dMM#   JMMMF      .MMM@ dMMM]          MMMMF       jMMMM'             MMMMF       dMMMF"
+    _trc ",MMM#  .MMM^dMM#  .MMM@      .MMM#` JMMMb         .MMMM!      (MMMMt             .MMMMa&+++++&MMMM"
+    _trc ",MMM# .MMMF dMM# .MMM#     `.MMM#`  ,MMMN     `   JMMM#       MMMM#              JMMMMMMMMMMMMMMM#"
+    _trc ".MMM# dMMF  dMM#.MMMM`     .MMMMNggggMMMM_       .MMMM%      .MMMM#             .MMMMY7777777MMMMF"
+    _trc ".MMM@(MM#   dMM#(MMM!     .MMMMMMMMMMMMMM]       .MMMM`    `  MMMMM,    `       .MMMM       .MMMM:"
+    _trc " MMMNMM#`   dMMMMMM^     .MMMM$      MMMMb   `   dMMMF        ,MMMMMa,.  ` ..   dMMMF       JMMM#"
+    _trc " MMMMMM'    dMMMMM%     .MMMMF       dMMM#      .MMMM          .WMMMMMMMMMMMF  .MMMM>      .MMMM%"
+    _trc " MMMMM^     ?MMMMt     .MMMMD        ?MMMM      JMMMB             ?'MMMMMMMY'  ?MMME       ,MMMM`"
+    notifier.notify title: "gulp", message: "watch start..."
 
 gulp.task "default", [ "clean" ], ->
-  runSequence [ "copyjson" ], [ "tasksHtml", "tasksCss", "tasksJs", "copyimg", "copyother" ], ->
+  runSequence [ "copyjson", "createTsify" ], [ "tasksHtml", "tasksCss", "tasksJs", "tasksTsify", "copyimg", "copyother" ], ->
     _trc "    .gNNNNNNNNm+.     .NNNK_      .NNNK_  .dNNmI   .NNNm_         .gNNNNNNNNNga..       jNNNR"
     _trc "   .dMMMMBWHMMMMN+    jMMM#       jMMM#   .MMM#>   jMMM#          ,MMMMHBWHMMMMMNx     .WMM#3"
     _trc "   .MMM#>   .WMMM@   .MMM#C      .MMM#C   JMMM#   .WMM#3          jMMM#     (TMMMNs    ,MMM#`"
