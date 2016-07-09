@@ -50,6 +50,7 @@ PATHS =
   js      : "#{DIR_S}/**/*.js"
   json    : "#{DIR_S}/**/*.json"
   img     : "#{DIR_S}/**/*.{png,jpg,gif}"
+  libs    : "#{DIR_S}/**/#{PRF}libs/*"
   other   : [
     "#{DIR_S}/**/*"
     "#{DIR_S}/**/.htaccess"
@@ -85,7 +86,9 @@ _cgd = (ext) ->
   if ext? then return $.changed DIR_P, { extension:".#{ext}" }
   else return $.changed DIR_P
 
-_dst = -> return gulp.dest DIR_P
+_dst = (dir) ->
+  if not dir then dir = ""
+  return gulp.dest "#{DIR_P}#{dir}"
 
 _cpy = (src, task, callback) ->
   if callback? then gulp.src(src).pipe(_cgd()).pipe(_plm(task)).pipe(callback()).pipe(_dst())
@@ -146,7 +149,7 @@ gulp.task "sass", ->
     .pipe _dst()
 
 # js
-_tasksJs = [ "copyjs", "ts", "coffee", "uglify" ]
+_tasksJs = [ "copyjs", "ts", "coffee", "uglify", "concat:libs" ]
 _projTsify = $.typescript.createProject
   target: "#{ESV}"
   removeComments: true
@@ -168,12 +171,12 @@ _tsify = (filename) ->
       bs
         .pipe source "#{filename}.js"
         .pipe buffer()
-        .pipe gulp.dest _destdir
+        .pipe _dst "/#{DIR_TSIFY}"
       bs
         .pipe source "#{filename}.min.js"
         .pipe buffer()
         .pipe $.uglify()
-        .pipe gulp.dest _destdir
+        .pipe _dst "/#{DIR_TSIFY}"
     return
 if FILES_TSIFY.length then for file in FILES_TSIFY then _tsify file
 
@@ -202,6 +205,13 @@ gulp.task "uglify", ->
     .pipe _plm "js"
     .pipe $.uglify()
     .pipe _dst()
+
+gulp.task "concat:libs", ->
+  gulp.src PATHS.libs
+    .pipe _plm "concat:libs"
+    .pipe $.concat "libs.js", { newLine: ";" }
+    .pipe $.uglify preserveComments: "some"
+    .pipe _dst "/#{DIR_TSIFY}"
 
 # json
 gulp.task "jsonlint", ->
